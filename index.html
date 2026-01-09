@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Milkes Bank Ultimate Pro NFC</title>
+    <style>
+        :root {
+            --bg: #050508;
+            --accent: #00ffa3;
+            --glass: rgba(255, 255, 255, 0.05);
+            --error: #ff4757;
+            --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0,255,163,0.05);
+        }
+
+        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 450px; height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+        .header-fixed {
+            height: 70px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(5,5,8,0.9); border-bottom: 1px solid var(--glass); z-index: 100;
+        }
+        .header-fixed h2 { color: var(--accent); margin: 0; letter-spacing: 3px; font-size: 18px; text-shadow: 0 0 15px rgba(0,255,163,0.4); }
+
+        .screen {
+            display: none; flex-grow: 1; flex-direction: column; align-items: center; justify-content: space-between;
+            padding-bottom: 30px; background: radial-gradient(circle at top, #0a1f1a 0%, #050508 100%);
+            animation: fadeIn 0.4s ease-out;
+        }
+        .active { display: flex; }
+
+        /* ПРЕМИАЛЬНЫЙ БАННЕР */
+        .promo-box {
+            margin: auto; text-align: center; width: 85%; padding: 50px 20px; border-radius: 40px;
+            border: 1px solid rgba(0, 255, 163, 0.15); background: linear-gradient(145deg, rgba(0,255,163,0.05), transparent);
+            box-shadow: var(--shadow-premium);
+        }
+
+        .pay-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 90%; }
+        .tile {
+            background: #141416; border-radius: 28px; padding: 20px; height: 130px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 1px solid var(--glass); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.2s;
+        }
+        .tile:active { transform: scale(0.95); }
+        .tile img { width: 45px; margin-bottom: 12px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8)); }
+        .tile.green { background: #52b140; color: #000; border: none; }
+
+        .numpad button {
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.08);
+            color: #fff; padding: 22px; border-radius: 50%; font-size: 26px; box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+        }
+        .btn-confirm { 
+            width: 90%; padding: 24px; border-radius: 24px; background: var(--accent); 
+            border: none; font-weight: 900; color: #000; font-size: 18px; box-shadow: 0 15px 35px rgba(0,255,163,0.2);
+        }
+
+        .ring { position: absolute; width: 110px; height: 110px; border: 2px solid var(--accent); border-radius: 50%; animation: ringPulse 2s infinite; opacity: 0; }
+        @keyframes ringPulse { 0% { transform: scale(0.6); opacity: 0.8; } 100% { transform: scale(2.4); opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .res-success { background: radial-gradient(circle at center, #0d3d2e 0%, #050508 100%) !important; }
+        .res-error { background: radial-gradient(circle at center, #3d0d0d 0%, #050508 100%) !important; }
+
+        #qr-view {
+            position: absolute; top: 70px; left: 0; width: 100%; height: calc(100% - 70px);
+            background: radial-gradient(circle at center, #0a1f1a 0%, #050508 100%);
+            z-index: 500; display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-fixed">
+        <h2>MILKES BANK</h2>
+        <a href="https://t.me/rt_milkes" style="color: #444; text-decoration: none; font-size: 11px;">t.me/rt_milkes</a>
+    </div>
+
+    <div id="s_promo" class="screen active" onclick="nav('s_input')">
+        <div class="promo-box">
+            <h1 style="font-size: 36px; margin: 0; font-weight: 900; letter-spacing: -1px;">ПРЕМИАЛЬНЫЙ<br>СЕРВИС</h1>
+            <p style="color: var(--accent); font-weight: bold; margin-top: 20px; letter-spacing: 2px;">MILKES ULTIMATE v4.0</p>
+        </div>
+        <div style="font-size: 10px; opacity: 0.3; letter-spacing: 5px;">TAP TO START</div>
+    </div>
+
+    <div id="s_input" class="screen">
+        <div style="text-align: center; margin-top: 40px;">
+            <h1 id="d-sum" style="font-size: 60px; margin: 0; font-weight: 900; text-shadow: 0 10px 25px rgba(0,0,0,0.6);">0 ₽</h1>
+            <div style="color: #444; font-weight: bold;">КОМИССИЯ 5%: <span id="d-fee">0</span> ₽</div>
+        </div>
+        <div class="numpad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 85%; margin-bottom: 20px;">
+            <button onclick="press('1')">1</button><button onclick="press('2')">2</button><button onclick="press('3')">3</button>
+            <button onclick="press('4')">4</button><button onclick="press('5')">5</button><button onclick="press('6')">6</button>
+            <button onclick="press('7')">7</button><button onclick="press('8')">8</button><button onclick="press('9')">9</button>
+            <button onclick="press('00')">00</button><button onclick="press('0')">0</button><button onclick="clr()">C</button>
+        </div>
+        <button class="btn-confirm" onclick="nav('s_pay')">ОПЛАТИТЬ</button>
+    </div>
+
+    <div id="s_pay" class="screen">
+        <div style="flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative;">
+            <div class="ring"></div>
+            <h1 id="p-sum" style="font-size: 50px; margin: 0; font-weight: 900;">0 ₽</h1>
+            <p style="color: var(--accent); margin-top: 30px; font-weight: 900; letter-spacing: 1px;">ПРИЛОЖИТЕ КАРТУ</p>
+        </div>
+        <div class="pay-tiles">
+            <div class="tile" onclick="openQR()">
+                <img src="https://cdn-icons-png.flaticon.com/512/714/714390.png">
+                <b style="font-size: 14px;">QR-код</b>
+            </div>
+            <div class="tile green" onclick="finish(true, 'Оплата по улыбке')">
+                <img src="https://cdn-icons-png.flaticon.com/512/9131/9131529.png" style="filter: brightness(0);">
+                <b style="font-size: 14px;">Улыбкой</b>
+            </div>
+        </div>
+        <div style="font-size: 10px; color: #1a1a1a; padding: 10px;">ID ТЕРМИНАЛА: 263009816</div>
+    </div>
+
+    <div id="qr-view">
+        <div style="background: #fff; padding: 20px; border-radius: 30px; box-shadow: 0 0 50px rgba(0,255,163,0.3);">
+            <img src="https://cdn-icons-png.flaticon.com/512/3125/3125713.png" width="200">
+        </div>
+        <p style="margin-top: 30px; font-weight: 900; font-size: 20px; color:#fff;">ОПЛАТА СБП</p>
+    </div>
+
+    <div id="s_res" class="screen">
+        <div style="margin: auto; text-align: center;">
+            <div id="loader" style="width: 60px; height: 60px; border: 4px solid #111; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;"></div>
+            <div id="res-box" style="display: none;">
+                <img id="res-img" src="" width="140" style="filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));">
+                <h1 id="res-h" style="margin: 20px 0; font-size: 34px; font-weight: 900;"></h1>
+                <div style="background: rgba(255,255,255,0.07); padding: 15px 40px; border-radius: 20px; margin-bottom: 20px; box-shadow: var(--shadow-premium);">
+                    <span style="font-size: 12px; opacity: 0.5; display: block;">СУММА ТРАНЗАКЦИИ</span>
+                    <b id="res-total" style="font-size: 26px;">0 ₽</b>
+                </div>
+                <p id="res-p" style="font-size: 16px; opacity: 0.8;"></p>
+                <button class="btn-confirm" onclick="location.reload()" style="margin-top: 30px; width:100%;">ЗАВЕРШИТЬ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let sum = "0";
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(f, type, d) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = f;
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + d);
+    }
+
+    function nav(id) {
+        playSound(800, 'sine', 0.1);
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 's_pay') {
+            document.getElementById('p-sum').innerText = parseInt(sum).toLocaleString() + " ₽";
+            startNFC();
+        }
+    }
+
+    function press(n) { playSound(1000, 'sine', 0.05); if(sum === "0") sum = ""; sum += n; up(); }
+    function clr() { playSound(400, 'sine', 0.1); sum = "0"; up(); }
+    function up() {
+        const v = parseInt(sum) || 0;
+        document.getElementById('d-sum').innerText = v.toLocaleString() + " ₽";
+        document.getElementById('d-fee').innerText = Math.floor(v*0.05).toLocaleString();
+    }
+
+    function openQR() {
+        document.getElementById('qr-view').style.display = 'flex';
+        setTimeout(() => {
+            document.getElementById('qr-view').style.display = 'none';
+            finish(true, "Оплата по QR");
+        }, 2500);
+    }
+
+    async function startNFC() {
+        if ('NDEFReader' in window) {
+            try {
+                const ndef = new NDEFReader();
+                await ndef.scan();
+                ndef.onreading = event => {
+                    const decoder = new TextDecoder();
+                    for (const record of event.message.records) {
+                        const cardBalance = parseInt(decoder.decode(record.data));
+                        if (cardBalance >= parseInt(sum)) {
+                            finish(true, "Одобрено по NFC");
+                        } else {
+                            finish(false, "Недостаточно средств на NFC");
+                        }
+                    }
+                };
+            } catch (e) { console.log("NFC Ready"); }
+        }
+    }
+
+    function finish(success, msg) {
+        nav('s_res');
+        const s = document.getElementById('s_res');
+        const v = parseInt(sum);
+        setTimeout(() => {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('res-box').style.display = 'block';
+            document.getElementById('res-total').innerText = v.toLocaleString() + " ₽";
+            document.getElementById('res-p').innerText = msg;
+            
+            if(success && v < 3000000) {
+                s.classList.add('res-success');
+                playSound(1200, 'triangle', 0.3);
+                document.getElementById('res-img').src = "https://cdn-icons-png.flaticon.com/512/5610/5610944.png";
+                document.getElementById('res-h').innerText = "Успешно";
+                document.getElementById('res-h').style.color = "var(--accent)";
+            } else {
+                s.classList.add('res-error');
+                playSound(200, 'sawtooth', 0.5);
+                document.getElementById('res-img').src = "https://cdn-icons-png.flaticon.com/512/5974/5974771.png";
+                document.getElementById('res-h').innerText = "Отказано";
+                document.getElementById('res-h').style.color = "var(--error)";
+                if(v >= 3000000) document.getElementById('res-p').innerText = "Лимит превышен";
+            }
+        }, 1500);
+    }
+</script>
+</body>
+</html>
